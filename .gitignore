@@ -31,3 +31,6 @@ fp-info-cache
 
 # osx
 .DS_Store
+
+# Generated PDFs and temporary export files
+/output/
