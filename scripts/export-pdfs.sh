@@ -32,12 +32,23 @@ layers="F.Cu,In1.Cu,In2.Cu,B.Cu,F.Silkscreen,B.Silkscreen"
 
 python3 - "$staging_dir" <<'PYTHON'
 from pathlib import Path
+import re
 import sys
 
 for filename in ("schematic.pdf", "layout.pdf"):
     data = (Path(sys.argv[1]) / filename).read_bytes()
     if not data.startswith(b"%PDF-") or b"%%EOF" not in data[-1024:]:
         raise SystemExit(f"Invalid or incomplete PDF: {filename}")
+    previous = Path("output") / filename
+    if previous.exists():
+        # KiCad embeds the export time even when the design is unchanged.
+        # Compare without that metadata and keep the original PDF if identical.
+        def without_export_time(pdf):
+            return re.sub(rb"/CreationDate \(D:[0-9:]+\)", b"/CreationDate ()", pdf)
+
+        old_data = previous.read_bytes()
+        if without_export_time(data) == without_export_time(old_data):
+            (Path(sys.argv[1]) / filename).write_bytes(old_data)
 PYTHON
 
 cp "$staging_dir/schematic.pdf" output/schematic.pdf
